@@ -99,7 +99,7 @@ Pela linha de comando, o equivalente é `esphome run ac-zigbee-esp32c6.yaml` e e
 3. Reinicie a Super Mini (RST ou tirando e pondo a USB). Ela entra na rede sozinha.
 4. Confira se aparecem as entidades da tabela acima. Sem o AC ligado, os valores do AC ficam vazios ou zerados, é normal.
    * **ZHA:** Configurações → Dispositivos → o dispositivo → Controles / Sensores.
-   * **Zigbee2MQTT:** o dispositivo → aba **Exposes**. Os nomes (`wifi_ota`, `ac_power`...) aparecem a partir do Zigbee2MQTT 2.8.
+   * **Zigbee2MQTT:** o dispositivo → aba **Exposes**. As chaves do MQTT são sempre genéricas (`binary_output_4`, `analog_output_2`...), com o número do endpoint. O nome do ESPHome (`wifi_ota`, `ac_power`...) aparece como rótulo na aba Exposes e como nome da entidade no Home Assistant.
 5. Se faltar alguma entidade depois de gravar um firmware novo, o coordenador ainda guarda os endpoints antigos. No Zigbee2MQTT use **Interview** e depois **Reconfigure**; no ZHA use **Reconfigurar**. Se não resolver, remova o dispositivo e pareie de novo.
 
 ### 5. Montar o divisor e os fios
