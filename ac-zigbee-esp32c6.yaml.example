@@ -9,7 +9,9 @@
 # apenas internamente, e as entidades "ponte" abaixo (switch, number e
 # sensor) refletem e controlam o climate pelo Zigbee.
 #
-# Requer o Zigbee nativo do ESPHome (não usar luar123/zigbee_esphome).
+# Requer ESPHome 2026.10 ou mais novo, com o Zigbee nativo
+# (não usar luar123/zigbee_esphome). Até a 2026.9 o Zigbee do ESP32 só
+# exporta sensor e binary_sensor: os switches e numbers não apareceriam.
 # Veja README.ZIGBEE.md para ligação e mapeamento dos valores.
 # =====================================================================
 
@@ -43,8 +45,6 @@ external_components:
 zigbee:
   id: zb
   router: true
-  model: ${device_name}
-  manufacturer: "esphome"
   power_source: MAINS_SINGLE_PHASE
 
 # ---------------------------------------------------------------------
@@ -62,11 +62,11 @@ wifi:
 ota:
   - platform: esphome
 
-# Opcional, apenas para ver logs pelo Wi-Fi
-# api:
-#   reboot_timeout: 0s    # obrigatório, senão reinicia a cada 15 min sem cliente
-#   encryption:
-#     key: !secret api_encryption_key
+# Opcional, para logs pelo Wi-Fi e integração ESPHome no Home Assistant
+api:
+  encryption:
+    key: !secret api_encryption_key
+  reboot_timeout: 0s    # obrigatório, senão reinicia a cada 15 min sem cliente
 
 # ---------------------------------------------------------------------
 # UART do AC

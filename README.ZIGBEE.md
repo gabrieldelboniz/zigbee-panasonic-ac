@@ -7,7 +7,7 @@ O ESP32-C6 controla o AC pela UART e ao mesmo tempo funciona como roteador (repe
 ## Requisitos
 
 * ESP32-C6 Super Mini (ou outra placa ESP32-C6/H2, ajustando os pinos)
-* ESPHome com Zigbee nativo para ESP32 (2026.5 ou mais novo). Não use o componente externo `luar123/zigbee_esphome`.
+* **ESPHome 2026.10 ou mais novo**, com o Zigbee nativo. Até a 2026.9 o Zigbee do ESP32 só exporta `sensor` e `binary_sensor`, então os switches e numbers (os controles do AC) não apareceriam. Não use o componente externo `luar123/zigbee_esphome`.
 * Coordenador Zigbee: ZHA ou Zigbee2MQTT
 
 > O nRF52840 não serve para o AC hoje: o ESPHome ainda não tem driver de UART para o nRF52. Ele pode ser usado como roteador Zigbee.
@@ -66,13 +66,15 @@ No Home Assistant dá para juntar tudo de novo em um termostato com o "Template 
 
 ### 2. Preparar o ESPHome
 
-1. No Home Assistant, abra o **ESPHome Device Builder** (ou use o ESPHome pela linha de comando).
+1. No Home Assistant, atualize o add-on **ESPHome Device Builder** para 2026.10 ou mais novo e abra-o (ou use o ESPHome pela linha de comando).
 2. Crie um dispositivo novo e cole o conteúdo de [`ac-zigbee-esp32c6.yaml.example`](ac-zigbee-esp32c6.yaml.example).
 3. Em **Secrets** (ou no arquivo `secrets.yaml`) adicione:
    ```yaml
    wifi_ssid: "NomeDaSuaRede"
    wifi_password: "SenhaDaSuaRede"
+   api_encryption_key: "chave gerada pelo ESPHome"
    ```
+   Se não quiser a API, remova o bloco `api:` do YAML.
 4. Ajuste no YAML:
    * `type: cnt` para CN-CNT (CZ-TACG1) ou `type: wlan` para CN-WLAN (DNSK-P11)
    * descomente os switches extras (eco, nanoe X etc.) que o seu controle remoto tiver
