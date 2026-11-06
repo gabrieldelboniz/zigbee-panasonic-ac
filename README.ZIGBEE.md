@@ -142,7 +142,7 @@ Para o primeiro teste, vale gravar antes com `logger: level: VERBOSE`, que mostr
    * CN-CNT: deve aparecer um `TX: 70 ...` (consulta) a cada 5 segundos, seguido de um `RX: ...` (resposta do AC).
    * CN-WLAN: aparecem os pacotes de handshake e, depois, as respostas.
 2. Em até um minuto as entidades devem mostrar os valores reais do AC (modo, temperaturas etc.).
-3. Teste nesta ordem, pelo Zigbee: `ac_target_temperature`, depois `ac_power`, depois `ac_mode` e `ac_fan`. O AC deve apitar a cada comando aceito.
+3. Teste nesta ordem, pelo Zigbee: `ac_target_temperature`, depois `ac_power`, depois `ac_mode` e `ac_fan`. Confira no próprio AC (visor e aletas) se o comando foi aceito.
 4. Se só aparecer `TX` e nenhum `RX`:
    * confira se o `type` (`cnt` / `wlan`) está certo
    * inverta os fios RX e TX (é o erro mais comum)
