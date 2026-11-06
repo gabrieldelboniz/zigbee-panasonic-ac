@@ -104,30 +104,50 @@ Pela linha de comando, o equivalente é `esphome run ac-zigbee-esp32c6.yaml` e e
 
 ### 5. Montar o divisor e os fios
 
-1. Solde o resistor de 1 kΩ entre o fio do **TX do AC** e o pino **RX (GPIO17)**.
-2. Solde o resistor de 2 kΩ entre o pino **RX (GPIO17)** e o **GND**.
-3. Ligue o **RX do AC** direto no pino **TX (GPIO16)**.
-4. Ligue **5 V** do AC no pino **5V** e **GND** no **GND**.
-5. Isole cada solda com termorretrátil.
+Pinagem dos conectores, olhando pelas fotos dos guias. Nas fotos, **RX/TX estão nomeados do ponto de vista do ESP**:
 
-Teste opcional: alimente o lado do AC com 5 V numa bancada e meça o pino GPIO17, deve dar cerca de 3,3 V.
+| CN-CNT (5 pinos, trava para cima) | CN-WLAN (DNSK-P11) | Vai para a Super Mini |
+| --- | --- | --- |
+| 5V | 5V | pino **5V** |
+| RX (sai do AC, 5 V) | RX (sai do AC, 5 V) | divisor → pino **RX (GPIO17)** |
+| TX (entra no AC) | TX (entra no AC) | pino **TX (GPIO16)** |
+| **12V — não ligar!** | — | nada (isole a ponta) |
+| GND | Ground | pino **GND** |
+
+1. Solde o resistor de 1 kΩ entre o fio **RX** do conector e o pino **RX (GPIO17)**.
+2. Solde o resistor de 2 kΩ entre o pino **RX (GPIO17)** e o **GND**.
+3. Ligue o fio **TX** do conector direto no pino **TX (GPIO16)**.
+4. Ligue **5V** no pino **5V** e **GND** no **GND**.
+5. No CN-CNT, isole o fio de **12 V** sozinho. Encostar 12 V em qualquer pino queima a placa.
+6. Isole cada solda com termorretrátil.
+
+Antes de ligar a Super Mini, com o AC energizado, meça no conector (ponta preta no GND):
+* **5V**: cerca de 5 V
+* **RX**: cerca de 5 V parado (é a saída do AC)
+* **TX**: se der cerca de 5 V, o AC tem pull-up para 5 V; coloque um resistor de 1 kΩ em série entre esse fio e o GPIO16
 
 ### 6. Instalar no AC
 
 1. **Desligue o disjuntor do AC.** Os contatos de rede ficam expostos.
 2. Abra o AC e encontre o conector, seguindo o guia [CZ-TACG1](README.CZTACG1.md) ou [DNSK-P11](README.DNSKP11.md).
-3. Desconecte o cabo USB da Super Mini e ligue os fios no conector do AC.
-4. Acomode a placa no lugar do módulo Wi-Fi original (velcro ajuda) e feche o AC.
-5. Religue o disjuntor.
+3. Desconecte o cabo USB da Super Mini e ligue os fios no conector do AC. Nunca use a USB e o 5 V do AC ao mesmo tempo.
+4. Deixe a placa num lugar provisório onde dá para medir e mexer, e religue o disjuntor.
+5. Só depois de tudo funcionar, acomode a placa no lugar do módulo Wi-Fi original (velcro ajuda) e feche o AC.
 
 ### 7. Conferir
 
-1. Em até um minuto as entidades devem mostrar os valores reais do AC (modo, temperatura etc.).
-2. Teste `ac_power` e `ac_target_temperature` pelo Zigbee.
-3. Se nada responder:
+Para o primeiro teste, vale gravar antes com `logger: level: VERBOSE`, que mostra cada pacote trocado com o AC (`TX: ...` e `RX: ...`). Depois volte para `DEBUG`.
+
+1. Ligue o `wifi_ota` e abra **Logs → Wirelessly** no ESPHome.
+   * CN-CNT: deve aparecer um `TX: 70 ...` (consulta) a cada 5 segundos, seguido de um `RX: ...` (resposta do AC).
+   * CN-WLAN: aparecem os pacotes de handshake e, depois, as respostas.
+2. Em até um minuto as entidades devem mostrar os valores reais do AC (modo, temperaturas etc.).
+3. Teste nesta ordem, pelo Zigbee: `ac_target_temperature`, depois `ac_power`, depois `ac_mode` e `ac_fan`. O AC deve apitar a cada comando aceito.
+4. Se só aparecer `TX` e nenhum `RX`:
    * confira se o `type` (`cnt` / `wlan`) está certo
-   * inverta TX e RX (é o erro mais comum)
-   * meça o GPIO17: com o AC ligado deve oscilar entre 0 e ~3,3 V
+   * inverta os fios RX e TX (é o erro mais comum)
+   * meça o GPIO17: com o AC ligado deve ficar em ~3,3 V e oscilar quando o AC responde
+5. Se aparecer `Dropping invalid packet`, o sinal chega mas com erro: confira o divisor e o GND.
 
 ### 8. Atualizações (OTA pelo Wi-Fi)
 
