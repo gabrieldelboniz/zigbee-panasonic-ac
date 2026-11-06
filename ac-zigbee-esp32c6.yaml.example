@@ -114,7 +114,6 @@ climate:
     # Estes já aparecem direto no Zigbee
     outside_temperature:
       name: ac_outside_temperature
-      cluster: device_class
     defrost_sensor:
       name: ac_defrost
 
@@ -193,14 +192,13 @@ script:
       - switch.turn_off: wifi_switch
 
 # ---------------------------------------------------------------------
-# Switches (Zigbee: cluster On/Off)
+# Switches (Zigbee: Binary Output, o nome vai no atributo "description")
 # ---------------------------------------------------------------------
 switch:
   # Liga no último modo usado / desliga o AC
   - platform: template
     id: ac_power
     name: ac_power
-    cluster: on_off
     restore_mode: DISABLED   # não envia comando ao AC no boot
     turn_on_action:
       - lambda: |-
@@ -219,7 +217,6 @@ switch:
   - platform: template
     id: wifi_switch
     name: wifi_ota
-    cluster: on_off
     optimistic: true
     restore_mode: ALWAYS_OFF
     turn_on_action:
@@ -314,7 +311,7 @@ number:
           id(ac_hswing_select).make_call().set_index((size_t) x).perform();
 
 # ---------------------------------------------------------------------
-# Sensores (Zigbee: Analog Input / Temperature Measurement)
+# Sensores (Zigbee: Analog Input, o nome vai no atributo "description")
 # ---------------------------------------------------------------------
 sensor:
   # Temperatura ambiente lida pelo AC (atualizada pelo sync_bridge)
@@ -325,7 +322,6 @@ sensor:
     device_class: temperature
     state_class: measurement
     accuracy_decimals: 1
-    cluster: device_class
     update_interval: never
 
   # Diagnóstico (mesmos do roteador anterior)

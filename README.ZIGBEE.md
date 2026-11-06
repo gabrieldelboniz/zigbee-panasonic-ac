@@ -98,6 +98,9 @@ Pela linha de comando, o equivalente é `esphome run ac-zigbee-esp32c6.yaml` e e
 2. Ative o pareamento: **Permit join** no Zigbee2MQTT ou **Adicionar dispositivo** no ZHA.
 3. Reinicie a Super Mini (RST ou tirando e pondo a USB). Ela entra na rede sozinha.
 4. Confira se aparecem as entidades da tabela acima. Sem o AC ligado, os valores do AC ficam vazios ou zerados, é normal.
+   * **ZHA:** Configurações → Dispositivos → o dispositivo → Controles / Sensores.
+   * **Zigbee2MQTT:** o dispositivo → aba **Exposes**. Os nomes (`wifi_ota`, `ac_power`...) aparecem a partir do Zigbee2MQTT 2.8.
+5. Se faltar alguma entidade depois de gravar um firmware novo, o coordenador ainda guarda os endpoints antigos. No Zigbee2MQTT use **Interview** e depois **Reconfigure**; no ZHA use **Reconfigurar**. Se não resolver, remova o dispositivo e pareie de novo.
 
 ### 5. Montar o divisor e os fios
 
