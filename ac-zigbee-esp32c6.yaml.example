@@ -53,6 +53,8 @@ zigbee:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  fast_connect: true      # conecta direto na rede, sem varredura
+  power_save_mode: LIGHT  # modem sleep, ajuda a convivência com o Zigbee
   enable_on_boot: false   # sempre inicia com Wi-Fi desligado
   reboot_timeout: 0s      # não reinicia por estar sem Wi-Fi
   # Não use "ap:", é incompatível com Zigbee
