@@ -95,3 +95,7 @@ Examples:
 [Hardware installation for DNSK-P11](README.DNSKP11.md)
 
 [Hardware installation for CZ-TACG1](README.CZTACG1.md)
+
+# Zigbee (ESP32-C6)
+
+[Zigbee setup for ESP32-C6, with Wi-Fi only for OTA (Portuguese)](README.ZIGBEE.md)

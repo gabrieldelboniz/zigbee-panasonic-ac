@@ -1,0 +1,350 @@
+# =====================================================================
+# Panasonic AC via Zigbee - ESP32-C6
+# ---------------------------------------------------------------------
+# - Controla o AC pela UART (CN-CNT ou CN-WLAN)
+# - Funciona também como roteador (repetidor) Zigbee
+# - Wi-Fi desligado por padrão, ligado por um switch Zigbee só para OTA
+#
+# O Zigbee do ESPHome não exporta a entidade "climate". Ela existe
+# apenas internamente, e as entidades "ponte" abaixo (switch, number e
+# sensor) refletem e controlam o climate pelo Zigbee.
+#
+# Requer o Zigbee nativo do ESPHome (não usar luar123/zigbee_esphome).
+# Veja README.ZIGBEE.md para ligação e mapeamento dos valores.
+# =====================================================================
+
+substitutions:
+  device_name: panasonic-ac-zigbee
+  friendly_name: Panasonic AC Zigbee
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+  # O Zigbee nativo adiciona as partições necessárias sozinho
+
+logger:
+  level: DEBUG
+  # No C6 o logger usa a USB (USB_SERIAL_JTAG), deixando a UART livre
+
+external_components:
+  - source: github://gabrieldelboniz/zigbee-panasonic-ac
+    components: [panasonic_ac]
+
+# ---------------------------------------------------------------------
+# Zigbee (roteador)
+# ---------------------------------------------------------------------
+zigbee:
+  id: zb
+  router: true
+  model: ${device_name}
+  manufacturer: "esphome"
+  power_source: MAINS_SINGLE_PHASE
+
+# ---------------------------------------------------------------------
+# Wi-Fi apenas para atualizações (ligado pelo switch "wifi_ota")
+# ---------------------------------------------------------------------
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  enable_on_boot: false   # sempre inicia com Wi-Fi desligado
+  reboot_timeout: 0s      # não reinicia por estar sem Wi-Fi
+  # Não use "ap:", é incompatível com Zigbee
+
+ota:
+  - platform: esphome
+
+# Opcional, apenas para ver logs pelo Wi-Fi
+# api:
+#   reboot_timeout: 0s    # obrigatório, senão reinicia a cada 15 min sem cliente
+#   encryption:
+#     key: !secret api_encryption_key
+
+# ---------------------------------------------------------------------
+# UART do AC
+# TX do ESP -> RX do AC (3,3 V é aceito pelo AC)
+# TX do AC  -> divisor (1k série / 2k ao GND) -> RX do ESP
+# O ESP32-C6 NÃO aceita 5 V nos pinos.
+# Evite GPIO4, 5, 8, 9, 15 (boot) e 12, 13 (USB).
+# ---------------------------------------------------------------------
+uart:
+  tx_pin: GPIO22
+  rx_pin: GPIO23
+  baud_rate: 9600
+  parity: EVEN
+
+globals:
+  - id: heartbeat_count
+    type: int
+    initial_value: '0'
+  # Último modo ligado (1..5), usado pelo switch "ac_power"
+  - id: last_mode
+    type: int
+    restore_value: true
+    initial_value: '1'
+
+# ---------------------------------------------------------------------
+# Climate (interno, não aparece no Zigbee)
+# ---------------------------------------------------------------------
+climate:
+  - platform: panasonic_ac
+    id: ac
+    # CZ-TACG1 (CN-CNT): cnt / DNSK-P11 (CN-WLAN): wlan
+    type: cnt
+    name: Panasonic AC
+    horizontal_swing_select:
+      id: ac_hswing_select
+      name: ac_hswing_select
+      on_value:
+        - script.execute: sync_bridge
+    vertical_swing_select:
+      id: ac_vswing_select
+      name: ac_vswing_select
+      on_value:
+        - script.execute: sync_bridge
+    # Estes já aparecem direto no Zigbee
+    outside_temperature:
+      name: ac_outside_temperature
+      cluster: device_class
+    defrost_sensor:
+      name: ac_defrost
+
+    # Habilite conforme o controle remoto do seu AC
+    # (switches também aparecem direto no Zigbee)
+    # eco_switch:
+    #   name: ac_eco
+    # econavi_switch:
+    #   name: ac_econavi
+    # nanoex_switch:
+    #   name: ac_nanoex
+    # mild_dry_switch:
+    #   name: ac_mild_dry
+    # current_power_consumption:
+    #   name: ac_power_consumption
+
+    # current_temperature_offset: 0
+    # outside_temperature_offset: 0
+
+    on_state:
+      - script.execute: sync_bridge
+
+# ---------------------------------------------------------------------
+# Sincroniza o estado do climate -> entidades ponte do Zigbee
+# Só publica quando o valor muda, para não encher a rede de reports.
+# ---------------------------------------------------------------------
+script:
+  - id: sync_bridge
+    mode: queued
+    then:
+      - lambda: |-
+          static const climate::ClimateMode MODES[] = {
+              climate::CLIMATE_MODE_OFF,  climate::CLIMATE_MODE_HEAT_COOL,
+              climate::CLIMATE_MODE_COOL, climate::CLIMATE_MODE_HEAT,
+              climate::CLIMATE_MODE_DRY,  climate::CLIMATE_MODE_FAN_ONLY};
+          static const char *const FANS[] = {"Automatic", "1", "2", "3", "4", "5"};
+          static const char *const PRESETS[] = {"Normal", "Powerful", "Quiet"};
+
+          auto pub = [](number::Number *n, float v) {
+            if (n->state != v) n->publish_state(v);
+          };
+
+          // Liga/desliga e modo
+          bool on = id(ac).mode != climate::CLIMATE_MODE_OFF;
+          if (id(ac_power).state != on) id(ac_power).publish_state(on);
+          for (int i = 0; i < 6; i++) {
+            if (MODES[i] == id(ac).mode) {
+              pub(id(ac_mode), i);
+              if (i > 0) id(last_mode) = i;
+            }
+          }
+
+          // Temperaturas
+          float target = id(ac).target_temperature;
+          if (!std::isnan(target)) pub(id(ac_target_temperature), target);
+          float current = id(ac).current_temperature;
+          if (!std::isnan(current) && id(ac_current_temperature).state != current)
+            id(ac_current_temperature).publish_state(current);
+
+          // Ventilador e preset
+          for (int i = 0; i < 6; i++)
+            if (id(ac).get_custom_fan_mode() == FANS[i]) pub(id(ac_fan), i);
+          for (int i = 0; i < 3; i++)
+            if (id(ac).get_custom_preset() == PRESETS[i]) pub(id(ac_preset), i);
+
+          // Swing
+          auto v = id(ac_vswing_select).active_index();
+          if (v.has_value()) pub(id(ac_vswing), *v);
+          auto h = id(ac_hswing_select).active_index();
+          if (h.has_value()) pub(id(ac_hswing), *h);
+
+  - id: wifi_auto_off
+    mode: restart
+    then:
+      - delay: 30min
+      - switch.turn_off: wifi_switch
+
+# ---------------------------------------------------------------------
+# Switches (Zigbee: cluster On/Off)
+# ---------------------------------------------------------------------
+switch:
+  # Liga no último modo usado / desliga o AC
+  - platform: template
+    id: ac_power
+    name: ac_power
+    cluster: on_off
+    restore_mode: DISABLED   # não envia comando ao AC no boot
+    turn_on_action:
+      - lambda: |-
+          static const climate::ClimateMode MODES[] = {
+              climate::CLIMATE_MODE_OFF,  climate::CLIMATE_MODE_HEAT_COOL,
+              climate::CLIMATE_MODE_COOL, climate::CLIMATE_MODE_HEAT,
+              climate::CLIMATE_MODE_DRY,  climate::CLIMATE_MODE_FAN_ONLY};
+          int i = id(last_mode);
+          if (i < 1 || i > 5) i = 1;
+          id(ac).make_call().set_mode(MODES[i]).perform();
+    turn_off_action:
+      - lambda: |-
+          id(ac).make_call().set_mode(climate::CLIMATE_MODE_OFF).perform();
+
+  # Liga o Wi-Fi para OTA (desliga sozinho em 30 min e após reiniciar)
+  - platform: template
+    id: wifi_switch
+    name: wifi_ota
+    cluster: on_off
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+      - wifi.enable:
+      - script.execute: wifi_auto_off
+    turn_off_action:
+      - script.stop: wifi_auto_off
+      - wifi.disable:
+
+# ---------------------------------------------------------------------
+# Numbers (Zigbee: Analog Output)
+# Sem "optimistic": o valor só muda quando o AC confirma.
+# ---------------------------------------------------------------------
+number:
+  - platform: template
+    id: ac_target_temperature
+    name: ac_target_temperature
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 16
+    max_value: 30
+    step: 0.5
+    set_action:
+      - lambda: |-
+          id(ac).make_call().set_target_temperature(x).perform();
+
+  # 0=desligado 1=auto 2=frio 3=quente 4=seco 5=ventilar
+  - platform: template
+    id: ac_mode
+    name: ac_mode
+    min_value: 0
+    max_value: 5
+    step: 1
+    set_action:
+      - lambda: |-
+          static const climate::ClimateMode MODES[] = {
+              climate::CLIMATE_MODE_OFF,  climate::CLIMATE_MODE_HEAT_COOL,
+              climate::CLIMATE_MODE_COOL, climate::CLIMATE_MODE_HEAT,
+              climate::CLIMATE_MODE_DRY,  climate::CLIMATE_MODE_FAN_ONLY};
+          int i = (int) x;
+          if (i < 0 || i > 5) return;
+          id(ac).make_call().set_mode(MODES[i]).perform();
+
+  # 0=auto 1..5=velocidade
+  - platform: template
+    id: ac_fan
+    name: ac_fan
+    min_value: 0
+    max_value: 5
+    step: 1
+    set_action:
+      - lambda: |-
+          static const char *const FANS[] = {"Automatic", "1", "2", "3", "4", "5"};
+          int i = (int) x;
+          if (i < 0 || i > 5) return;
+          id(ac).make_call().set_fan_mode(FANS[i]).perform();
+
+  # 0=normal 1=powerful 2=quiet
+  - platform: template
+    id: ac_preset
+    name: ac_preset
+    min_value: 0
+    max_value: 2
+    step: 1
+    set_action:
+      - lambda: |-
+          static const char *const PRESETS[] = {"Normal", "Powerful", "Quiet"};
+          int i = (int) x;
+          if (i < 0 || i > 2) return;
+          id(ac).make_call().set_preset(PRESETS[i]).perform();
+
+  # 0=swing 1=auto 2=up 3=up_center 4=center 5=down_center 6=down
+  - platform: template
+    id: ac_vswing
+    name: ac_vswing
+    min_value: 0
+    max_value: 6
+    step: 1
+    set_action:
+      - lambda: |-
+          id(ac_vswing_select).make_call().set_index((size_t) x).perform();
+
+  # 0=auto 1=left 2=left_center 3=center 4=right_center 5=right
+  - platform: template
+    id: ac_hswing
+    name: ac_hswing
+    min_value: 0
+    max_value: 5
+    step: 1
+    set_action:
+      - lambda: |-
+          id(ac_hswing_select).make_call().set_index((size_t) x).perform();
+
+# ---------------------------------------------------------------------
+# Sensores (Zigbee: Analog Input / Temperature Measurement)
+# ---------------------------------------------------------------------
+sensor:
+  # Temperatura ambiente lida pelo AC (atualizada pelo sync_bridge)
+  - platform: template
+    id: ac_current_temperature
+    name: ac_current_temperature
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    cluster: device_class
+    update_interval: never
+
+  # Diagnóstico (mesmos do roteador anterior)
+  - platform: template
+    id: heartbeat
+    name: heartbeat
+    unit_of_measurement: "count"
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      id(heartbeat_count) += 1;
+      return id(heartbeat_count);
+
+  - platform: template
+    id: uptime_minutes
+    name: uptime_minutes
+    unit_of_measurement: "min"
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      return millis() / 60000.0;
+
+  - platform: internal_temperature
+    id: chip_temperature
+    name: chip_temperature
+    update_interval: 60s
