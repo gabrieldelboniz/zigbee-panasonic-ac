@@ -1,4 +1,4 @@
-# Panasonic AC via Zigbee (ESP32-C6)
+# Panasonic AC via Zigbee (ESP32-C6 Super Mini)
 
 Configuração de exemplo: [`ac-zigbee-esp32c6.yaml.example`](ac-zigbee-esp32c6.yaml.example)
 
@@ -6,7 +6,7 @@ O ESP32-C6 controla o AC pela UART e ao mesmo tempo funciona como roteador (repe
 
 ## Requisitos
 
-* ESP32-C6 (ou ESP32-H2)
+* ESP32-C6 Super Mini (ou outra placa ESP32-C6/H2, ajustando os pinos)
 * ESPHome com Zigbee nativo para ESP32 (2026.5 ou mais novo). Não use o componente externo `luar123/zigbee_esphome`.
 * Coordenador Zigbee: ZHA ou Zigbee2MQTT
 
@@ -16,15 +16,18 @@ O ESP32-C6 controla o AC pela UART e ao mesmo tempo funciona como roteador (repe
 
 | AC | ESP32-C6 |
 | --- | --- |
-| TX (5 V) | divisor de tensão → GPIO23 (RX) |
-| RX | GPIO22 (TX), direto (o AC aceita 3,3 V) |
+| TX (5 V) | divisor de tensão → pino RX (GPIO17) |
+| RX | pino TX (GPIO16), direto (o AC aceita 3,3 V) |
+| 5 V | 5V |
 | GND | GND |
 
-Divisor de tensão: resistor de 1 kΩ em série entre o TX do AC e o GPIO23, e 2 kΩ entre o GPIO23 e o GND (5 V × 2/3 ≈ 3,3 V). Um optoacoplador PC817 também funciona a 9600 baud.
+Divisor de tensão: resistor de 1 kΩ em série entre o TX do AC e o GPIO17, e 2 kΩ entre o GPIO17 e o GND (5 V × 2/3 ≈ 3,3 V). Um optoacoplador PC817 também funciona a 9600 baud.
 
 **O ESP32-C6 não aceita 5 V nos pinos.** Com o AC ligado e nada conectado, meça o pino RX do AC: se der cerca de 5 V, existe um pull-up interno e convém colocar um resistor de ~1 kΩ em série no TX do ESP.
 
-Evite os pinos GPIO4, 5, 8, 9 e 15 (usados no boot) e GPIO12 e 13 (USB).
+O 5 V do conector do AC vai no pino 5V da Super Mini (nunca no 3V3). Não ligue a USB do computador ao mesmo tempo que o 5 V do AC.
+
+Evite os pinos GPIO4 e 5 (boot), GPIO8 (LED RGB e boot), GPIO9 (botão BOOT), GPIO15 (LED azul e boot) e GPIO12 e 13 (USB).
 
 ## Entidades no Zigbee
 

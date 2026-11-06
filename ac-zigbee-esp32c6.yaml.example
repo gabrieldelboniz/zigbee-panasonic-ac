@@ -1,5 +1,5 @@
 # =====================================================================
-# Panasonic AC via Zigbee - ESP32-C6
+# Panasonic AC via Zigbee - ESP32-C6 Super Mini
 # ---------------------------------------------------------------------
 # - Controla o AC pela UART (CN-CNT ou CN-WLAN)
 # - Funciona também como roteador (repetidor) Zigbee
@@ -22,8 +22,9 @@ esphome:
   friendly_name: ${friendly_name}
 
 esp32:
-  board: esp32-c6-devkitc-1
+  board: esp32-c6-devkitc-1   # serve para a Super Mini
   variant: esp32c6
+  flash_size: 4MB             # Super Mini tem 4 MB
   framework:
     type: esp-idf
   # O Zigbee nativo adiciona as partições necessárias sozinho
@@ -67,14 +68,15 @@ ota:
 
 # ---------------------------------------------------------------------
 # UART do AC
+# Super Mini: pinos marcados TX (GPIO16) e RX (GPIO17)
 # TX do ESP -> RX do AC (3,3 V é aceito pelo AC)
 # TX do AC  -> divisor (1k série / 2k ao GND) -> RX do ESP
 # O ESP32-C6 NÃO aceita 5 V nos pinos.
-# Evite GPIO4, 5, 8, 9, 15 (boot) e 12, 13 (USB).
+# Evite GPIO4, 5, 8 (LED RGB), 9 (BOOT), 15 (LED) e 12, 13 (USB).
 # ---------------------------------------------------------------------
 uart:
-  tx_pin: GPIO22
-  rx_pin: GPIO23
+  tx_pin: GPIO16
+  rx_pin: GPIO17
   baud_rate: 9600
   parity: EVEN
 
