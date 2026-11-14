@@ -1,0 +1,78 @@
+# =====================================================================
+# Roteador (repetidor) Zigbee - nRF52840 Pro Micro
+# ---------------------------------------------------------------------
+# Só roteador. O ESPHome ainda não tem driver de UART para o nRF52,
+# então esta placa NÃO consegue conversar com o AC. Para o AC use
+# ac-zigbee-esp32c6.yaml.example.
+#
+# Gravação: ESPHome -> Install -> Manual download -> UF2. Aperte o reset
+# duas vezes, aparece um drive USB; arraste o .uf2 para ele.
+# =====================================================================
+
+substitutions:
+  device_name: nrf52-zigbee-router
+  friendly_name: Zigbee Router nRF52
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+nrf52:
+  # A Pro Micro (clone do nice!nano) usa o mesmo bootloader Adafruit
+  board: adafruit_itsybitsy_nrf52840
+  # Confira no arquivo INFO_UF2.TXT do drive USB da placa:
+  # SoftDevice S140 6.x -> adafruit_nrf52_sd140_v6
+  # SoftDevice S140 7.x -> adafruit_nrf52_sd140_v7
+  bootloader: adafruit_nrf52_sd140_v6
+  # Opcional: permite regravar pela USB sem apertar o reset duas vezes
+  # dfu: true
+
+logger:
+  level: DEBUG
+  # Logs pela USB (CDC)
+
+# ---------------------------------------------------------------------
+# Zigbee (roteador)
+# Cada entidade com nome vira um endpoint (máximo de 8 no nRF52).
+# ---------------------------------------------------------------------
+zigbee:
+  id: zb
+  router: true
+  model: ${device_name}
+  power_source: DC_SOURCE
+  on_join:
+    then:
+      - logger.log: "Entrou na rede Zigbee"
+
+globals:
+  - id: heartbeat_count
+    type: int
+    initial_value: '0'
+
+# ---------------------------------------------------------------------
+# Diagnóstico (3 endpoints)
+# ---------------------------------------------------------------------
+sensor:
+  - platform: template
+    id: heartbeat
+    name: heartbeat
+    unit_of_measurement: "count"
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      id(heartbeat_count) += 1;
+      return id(heartbeat_count);
+
+  - platform: template
+    id: uptime_minutes
+    name: uptime_minutes
+    unit_of_measurement: "min"
+    accuracy_decimals: 1
+    update_interval: 60s
+    lambda: |-
+      return millis() / 60000.0;
+
+  - platform: internal_temperature
+    id: chip_temperature
+    name: chip_temperature
+    update_interval: 60s

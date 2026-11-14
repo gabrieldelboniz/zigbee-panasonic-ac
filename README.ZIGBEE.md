@@ -10,7 +10,7 @@ O ESP32-C6 controla o AC pela UART e ao mesmo tempo funciona como roteador (repe
 * **ESPHome 2026.10 ou mais novo**, com o Zigbee nativo. Até a 2026.9 o Zigbee do ESP32 só exporta `sensor` e `binary_sensor`, então os switches e numbers (os controles do AC) não apareceriam. Não use o componente externo `luar123/zigbee_esphome`.
 * Coordenador Zigbee: ZHA ou Zigbee2MQTT
 
-> O nRF52840 não serve para o AC hoje: o ESPHome ainda não tem driver de UART para o nRF52. Ele pode ser usado como roteador Zigbee.
+> O nRF52840 não serve para o AC hoje: o ESPHome ainda não tem driver de UART para o nRF52 (conferido em novembro de 2026). Ele pode ser usado como roteador Zigbee: veja [`router-zigbee-nrf52840.yaml.example`](router-zigbee-nrf52840.yaml.example).
 
 ## Ligação
 
