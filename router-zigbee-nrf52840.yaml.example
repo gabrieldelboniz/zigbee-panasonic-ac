@@ -8,7 +8,7 @@
 # Entidades no Zigbee (cada uma usa um endpoint, máximo de 8):
 #   heartbeat        contador que sobe a cada 60 s
 #   chip_temperature temperatura interna do nRF52840
-#   led              liga/desliga o LED azul da placa (teste)
+#   led              liga/desliga o LED da placa (teste)
 # O LQI (linkquality) aparece sozinho no Zigbee2MQTT: é medido pelo
 # coordenador a cada mensagem recebida, e o heartbeat garante uma
 # mensagem por minuto.
@@ -28,7 +28,7 @@ esphome:
   friendly_name: ${friendly_name}
 
 nrf52:
-  # A Pro Micro (clone do nice!nano) usa o mesmo bootloader Adafruit
+  # Pro Micro nRF52840 (ex.: V1940, clone do nice!nano): mesmo bootloader Adafruit
   board: adafruit_itsybitsy_nrf52840
   # Confira no arquivo INFO_UF2.TXT do drive USB da placa:
   # SoftDevice S140 6.x -> adafruit_nrf52_sd140_v6
@@ -75,7 +75,8 @@ sensor:
     update_interval: 60s
 
 # ---------------------------------------------------------------------
-# LED azul da Pro Micro (P0.15), para teste
+# LED da Pro Micro (P0.15, ativo em nível alto), para teste.
+# A cor varia entre clones (vermelho ou azul).
 # ---------------------------------------------------------------------
 switch:
   - platform: gpio
