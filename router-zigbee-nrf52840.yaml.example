@@ -5,8 +5,18 @@
 # então esta placa NÃO consegue conversar com o AC. Para o AC use
 # ac-zigbee-esp32c6.yaml.example.
 #
+# Entidades no Zigbee (cada uma usa um endpoint, máximo de 8):
+#   heartbeat        contador que sobe a cada 60 s
+#   chip_temperature temperatura interna do nRF52840
+#   led              liga/desliga o LED azul da placa (teste)
+# O LQI (linkquality) aparece sozinho no Zigbee2MQTT: é medido pelo
+# coordenador a cada mensagem recebida, e o heartbeat garante uma
+# mensagem por minuto.
+#
 # Gravação: ESPHome -> Install -> Manual download -> UF2. Aperte o reset
 # duas vezes, aparece um drive USB; arraste o .uf2 para ele.
+# O ESPHome não tem OTA pelo Zigbee (Zigbee2MQTT), então as
+# atualizações são pela USB.
 # =====================================================================
 
 substitutions:
@@ -33,7 +43,6 @@ logger:
 
 # ---------------------------------------------------------------------
 # Zigbee (roteador)
-# Cada entidade com nome vira um endpoint (máximo de 8 no nRF52).
 # ---------------------------------------------------------------------
 zigbee:
   id: zb
@@ -49,9 +58,6 @@ globals:
     type: int
     initial_value: '0'
 
-# ---------------------------------------------------------------------
-# Diagnóstico (3 endpoints)
-# ---------------------------------------------------------------------
 sensor:
   - platform: template
     id: heartbeat
@@ -63,16 +69,17 @@ sensor:
       id(heartbeat_count) += 1;
       return id(heartbeat_count);
 
-  - platform: template
-    id: uptime_minutes
-    name: uptime_minutes
-    unit_of_measurement: "min"
-    accuracy_decimals: 1
-    update_interval: 60s
-    lambda: |-
-      return millis() / 60000.0;
-
   - platform: internal_temperature
     id: chip_temperature
     name: chip_temperature
     update_interval: 60s
+
+# ---------------------------------------------------------------------
+# LED azul da Pro Micro (P0.15), para teste
+# ---------------------------------------------------------------------
+switch:
+  - platform: gpio
+    id: led
+    name: led
+    pin: P0.15
+    restore_mode: ALWAYS_OFF
